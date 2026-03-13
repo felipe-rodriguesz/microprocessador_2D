@@ -1,13 +1,14 @@
+# Dados gerados pelos programas Fortran
+data/results/*.dat
+data/results/*.txt
+data/*.dat
+
 # Executáveis compilados
 sim_ftcs
 sim_btcs
 sim_cn
-*.o
-*.mod
+sim_ftcs_instavel
+*.exe
 
-# Arquivos de dados gerados (são grandes e podem ser recriados)
-data/results/*.dat
-
-# Arquivos do Windows/sistema
-Thumbs.db
-.DS_Store
+# Arquivos temporários do MATLAB
+*.asv
