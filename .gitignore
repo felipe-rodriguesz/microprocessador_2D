@@ -2,13 +2,11 @@
 data/results/*.dat
 data/results/*.txt
 data/*.dat
-
 # Executáveis compilados
 sim_ftcs
 sim_btcs
 sim_cn
 sim_ftcs_instavel
 *.exe
-
 # Arquivos temporários do MATLAB
 *.asv
