@@ -1,4 +1,4 @@
-program simulacao_termica_ftcs
+program ftcs
     implicit none
 
     ! -------------------------------------------------------------------
@@ -25,14 +25,14 @@ program simulacao_termica_ftcs
     real(8), parameter :: periodo = 0.5             ! Pulso
 
     ! Parâmetros da malha
-    integer, parameter :: Nx = 100, Ny = 100         ! N° de nos da malha
+    integer :: Nx, Ny                               ! N° de nos da malha
     
     ! Variáveis de Malha e Tempo
-    real(8) :: dx, dy, dt, tmax
+    real(8) :: dx, dy, dt, tmax, fator_dt
     integer :: Nt
     
     ! Matrizes de temperatura
-    real(8) :: T(Nx, Ny), T_new(Nx, Ny), Q_gauss(Nx, Ny)
+    real(8), allocatable :: T(:, :), T_new(:, :), Q_gauss(:, :)
 
     ! Variáveis auxiliares
     integer :: i, j, n                                ! Índices
@@ -47,13 +47,25 @@ program simulacao_termica_ftcs
     real(8) :: tempo_limiar                           ! Guarda o instante exato do limiar
     real(8), parameter :: temp_alvo = 302.0           ! Limiar de aquecimento para análise
 
+    ! Variáveis para os Snapshots
+    integer :: proximo_segundo = 1
+    character(len=30) :: nome_arquivo
+
     ! -------------------------------------------------------------------
     ! ÁREA DE EXECUÇÃO (Cálculos e Loops)
     ! -------------------------------------------------------------------
-    dx = Lx / (Nx - 1)
-    dy = Ly / (Ny - 1)
+    write(*,*) "======================================================="
+    write(*,*) " Digite o tamanho da malha espacial (Nx e Ny):"
+    write(*,*) " Exemplo para 100x100, digite: 100 100"
+    write(*,*) "======================================================="
+    read(*,*) Nx, Ny, fator_dt
     
-    dt = (dx**2) / (4.0 * alpha)
+    allocate( T(Nx, Ny), T_new(Nx, Ny), Q_gauss(Nx, Ny) )
+
+    dx = Lx / dble(Nx - 1)
+    dy = Ly / dble(Ny - 1)
+    
+    dt = fator_dt * ((dx**2) / (4.0 * alpha))
     tmax = 4.75
     Nt = int(tmax / dt)
 
@@ -61,8 +73,7 @@ program simulacao_termica_ftcs
     ry = alpha * dt / (dy**2)
 
     if (rx + ry > 0.5) then
-        print *, "ERRO: Esquema instável! rx + ry = ", rx + ry
-        stop
+        print *, "AVISO: Limite de Von Neumann violado! rx + ry = ", rx + ry
     end if
 
     ! Condição inicial
@@ -75,7 +86,7 @@ program simulacao_termica_ftcs
         y = (j-1)*dy
         do i = 1, Nx
             x = (i-1)*dx
-            Q_gauss(i,j) = Q0 * exp(-((x-x0)**2 + (y-y0)**2)/(2.0d0*sigma**2))
+            Q_gauss(i,j) = Q0 * exp(-((x-x0)**2 + (y-y0)**2)/(2.0*sigma**2))
         end do
     end do
 
@@ -148,6 +159,11 @@ program simulacao_termica_ftcs
 
         ! Extração de dados a cada passo de tempo
         Tmax_atual = maxval(T)
+
+        if (Tmax_atual > 500.0) then
+            print *, "--> DIVERGIU! FTCS explodiu matematicamente. Interrompendo..."
+            exit
+        end if
         
         ! Verificação do limiar térmico
         if (.not. atingiu_limiar .and. Tmax_atual >= temp_alvo) then
@@ -156,6 +172,24 @@ program simulacao_termica_ftcs
         end if
         
         write(20, *) tempo, T(Nx/2, Ny/2), Tmax_atual
+
+        ! Salvar campos intermediários (Snapshots)
+        ! Verifica se o tempo cruzou 1.0, 2.0, 3.0 ou 4.0 segundos
+        if (tempo >= (proximo_segundo) .and. proximo_segundo <= 4) then
+            write(nome_arquivo, '("snap_ftcs_", I1, "s.dat")') proximo_segundo
+            
+            open(30, file=trim(nome_arquivo), status="replace")
+            do i = 1, Nx
+                do j = 1, Ny
+                    write(30,*) (i-1)*dx, (j-1)*dy, T(i,j)
+                end do
+            end do
+            close(30)
+            
+            print *, "--> Snapshot termico salvo: ", trim(nome_arquivo)
+            proximo_segundo = proximo_segundo + 1
+        end if
+
     end do
 
     ! Para o cronômetro
@@ -191,4 +225,46 @@ program simulacao_termica_ftcs
     close(10)
     close(20)
 
-end program simulacao_termica_ftcs
+    open(40, file = "dados_convergencia.dat", position="append", status="unknown")
+    write(40, *) Nx, dx, maxval(T)
+    close(40)
+    print *, "--> Ponto de convergencia salvo em 'dados_convergencia.dat'."
+
+    ! -------------------------------------------------------------------
+    ! SALVAMENTO DE MÉTRICAS E LOGS
+    ! -------------------------------------------------------------------
+    ! LOG ESTRUTURADO (.txt)
+    open(50, file = "log_ftcs.txt", status="replace")
+    write(50,'(A)')         "======================================================="
+    write(50,'(A)')         "         SIMULADOR TERMICO 2D - FTCS"
+    write(50,'(A)')         "======================================================="
+    write(50,'(A, I4, A, I4)')    " Malha            : ", Nx, " x ", Ny
+    write(50,'(A, F10.6, A)')     " dx               : ", dx, " m"
+    write(50,'(A, F10.6, A)')     " dt               : ", dt, " s"
+    write(50,'(A, I8)')           " Nt               : ", Nt
+    write(50,'(A, F10.3)')        " rx               : ", rx
+    write(50,'(A, F10.3, A)')     " CPU              : ", tempo_cpu, " s"
+    write(50,'(A, F10.2, A)')     " T_max final      : ", maxval(T), " K"
+    write(50,'(A, F10.3)')        " Media Iter/Passo : ", 1.0d0
+    write(50,'(A, ES10.2)')       " Residuo Maximo   : ", 0.0d0
+    write(50,'(A, ES10.2)')       " Erro L2 (Norma)  : ", 0.0d0
+    if (atingiu_limiar) then
+        write(50,'(A, F10.3, A)') " Limiar (302K)    : ", tempo_limiar, " s"
+    else
+        write(50,'(A)')           " Limiar (302K)    : Nao atingido"
+    end if
+    write(50,'(A)')         "======================================================="
+    close(50)
+
+    ! DADOS BRUTOS PARA O MATLAB (.dat)
+    open(51, file = "metricas_ftcs.dat", status="replace")
+    if (atingiu_limiar) then
+        write(51, *) Nx, dx, dt, rx, tempo_cpu, maxval(T), tempo_limiar, 1.0d0, 0.0d0, 0.0d0
+    else
+        write(51, *) Nx, dx, dt, rx, tempo_cpu, maxval(T), -1.0d0, 1.0d0, 0.0d0, 0.0d0
+    end if
+    close(51)
+
+    deallocate( T, T_new, Q_gauss )
+
+end program ftcs
