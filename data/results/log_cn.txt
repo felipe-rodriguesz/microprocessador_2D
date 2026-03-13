@@ -6,10 +6,15 @@
  dt               :   0.000111 s
  Nt               :    42815
  rx               :      0.250
- CPU              :     15.488 s
+ CPU              :     16.522 s
  T_max final      :     306.00 K
  Media Iter/Passo :      3.887
  Residuo Maximo   :   2.86E-05
  Erro L2 (Norma)  :   4.89E-06
  Limiar (302K)    :      0.076 s
+[PARAMETROS DE SENSIBILIDADE]
+ Q0               :   1.00E+08 W/m^3
+ x0               :    0.01000 m
+ y0               :    0.01000 m
+ Duty-Cycle       :      0.500
 =======================================================
