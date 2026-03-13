@@ -11,8 +11,10 @@ program crank_nicolson
     real(8), parameter :: alpha = k/(rho*cp)
     real(8), parameter :: h = 10.0, Tinf = 300.0
     
-    ! Hotspot
-    real(8), parameter :: Q0 = 1.0e8, x0 = Lx/2.0, y0 = Ly/2.0, sigma = 0.002, periodo = 0.5
+    ! Hotspot (valores lidos em tempo de execução)
+    real(8) :: Q0, x0, y0
+    real(8), parameter :: sigma = 0.002, periodo = 0.5
+    real(8) :: duty
     real(8) :: S_next, Q_next
 
     ! Parâmetros da malha e tempo
@@ -46,12 +48,11 @@ program crank_nicolson
     ! ÁREA DE EXECUÇÃO (Cálculos e Loops)
     ! -------------------------------------------------------------------
 
-    ! Pede o tamanho da malha
     write(*,*) "======================================================="
-    write(*,*) " Digite o tamanho da malha espacial (Nx e Ny):"
-    write(*,*) " Exemplo para 100x100, digite: 100 100"
+    write(*,*) " Entrada: Nx Ny fator_dt Q0 x0 y0 duty"
+    write(*,*) " Padrao : 100 100 1.0 1e8 0.01 0.01 0.5"
     write(*,*) "======================================================="
-    read(*,*) Nx, Ny, fator_dt
+    read(*,*) Nx, Ny, fator_dt, Q0, x0, y0, duty
     allocate( T(Nx, Ny), T_new(Nx, Ny), Q_gauss(Nx, Ny), RHS(Nx, Ny) )
 
     dx = Lx / dble(Nx - 1)
@@ -98,6 +99,11 @@ program crank_nicolson
     write(*,'(A)') "[PROPRIEDADES FISICAS E NUMERICAS]"
     write(*,'(A, ES10.2, A)')       " Difusividade (alpha)     : ", alpha, " m^2/s"
     write(*,'(A, F10.3)')           " Fator de Estabilidade rx : ", rx
+    write(*,'(A)') "[PARAMETROS DE SENSIBILIDADE]"
+    write(*,'(A, ES10.2, A)')       " Intensidade Q0           : ", Q0, " W/m^3"
+    write(*,'(A, F10.5, A)')        " Centro Hotspot x0        : ", x0, " m"
+    write(*,'(A, F10.5, A)')        " Centro Hotspot y0        : ", y0, " m"
+    write(*,'(A, F10.3)')           " Duty-Cycle               : ", duty
     write(*,'(A)') "======================================================="
     write(*,'(A)') " Iniciando loop temporal... aguarde."
     write(*,'(A)') ""
@@ -115,14 +121,14 @@ program crank_nicolson
         tempo = n * dt
 
         ! Estado atual do Duty-Cycle (instante t)
-        if ( mod(tempo, periodo) < (periodo / 2.0) ) then
+        if ( mod(tempo, periodo) < (duty * periodo) ) then
             S = 1.0
         else
             S = 0.0
         end if
 
         ! Estado futuro do Duty-Cycle (instante t + dt)
-        if ( mod(tempo + dt, periodo) < (periodo / 2.0) ) then
+        if ( mod(tempo + dt, periodo) < (duty * periodo) ) then
             S_next = 1.0
         else
             S_next = 0.0
@@ -301,15 +307,24 @@ program crank_nicolson
     else
         write(50,'(A)')           " Limiar (302K)    : Nao atingido"
     end if
+    write(50,'(A)')         "[PARAMETROS DE SENSIBILIDADE]"
+    write(50,'(A, ES10.2, A)')    " Q0               : ", Q0, " W/m^3"
+    write(50,'(A, F10.5, A)')     " x0               : ", x0, " m"
+    write(50,'(A, F10.5, A)')     " y0               : ", y0, " m"
+    write(50,'(A, F10.3)')        " Duty-Cycle       : ", duty
     write(50,'(A)')         "======================================================="
     close(50)
 
     ! DADOS BRUTOS PARA O MATLAB (.dat)
     open(51, file = "metricas_cn.dat", status="replace")
     if (atingiu_limiar) then
-        write(51, *) Nx, dx, dt, rx, tempo_cpu, maxval(T), tempo_limiar, real(total_iter)/real(Nt), residuo_max, erro_norma
+        write(51, *) Nx, dx, dt, rx, tempo_cpu, maxval(T), tempo_limiar, &
+                     real(total_iter)/real(Nt), residuo_max, erro_norma, &
+                     Q0, x0, y0, duty
     else
-        write(51, *) Nx, dx, dt, rx, tempo_cpu, maxval(T), -1.0d0, real(total_iter)/real(Nt), residuo_max, erro_norma
+        write(51, *) Nx, dx, dt, rx, tempo_cpu, maxval(T), -1.0d0, &
+                     real(total_iter)/real(Nt), residuo_max, erro_norma, &
+                     Q0, x0, y0, duty
     end if
     close(51)
 

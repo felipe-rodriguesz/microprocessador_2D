@@ -17,12 +17,12 @@ program ftcs
     real(8), parameter :: h = 10.0                  ! Convecção (W/(m^2*K))
     real(8), parameter :: Tinf = 300.0              ! Temp do fluido externo (K)
     
-    ! Hotspot
-    real(8), parameter :: Q0 = 1.0e8                ! Intesidade máx (W/m^3)
-    real(8), parameter :: x0 = Lx/2.0               ! Centro X
-    real(8), parameter :: y0 = Ly/2.0               ! Centro Y
-    real(8), parameter :: sigma = 0.002             ! Tamanho do Hotspot (m)
-    real(8), parameter :: periodo = 0.5             ! Pulso
+    ! Hotspot (valores lidos em tempo de execução)
+    real(8) :: Q0                                    ! Intensidade máx (W/m^3)
+    real(8) :: x0, y0                                ! Centro do hotspot (m)
+    real(8), parameter :: sigma = 0.002              ! Tamanho do Hotspot (m)
+    real(8), parameter :: periodo = 0.5              ! Período do pulso (s)
+    real(8) :: duty                                  ! Fração ativa do duty-cycle (0 a 1)
 
     ! Parâmetros da malha
     integer :: Nx, Ny                               ! N° de nos da malha
@@ -55,10 +55,10 @@ program ftcs
     ! ÁREA DE EXECUÇÃO (Cálculos e Loops)
     ! -------------------------------------------------------------------
     write(*,*) "======================================================="
-    write(*,*) " Digite o tamanho da malha espacial (Nx e Ny):"
-    write(*,*) " Exemplo para 100x100, digite: 100 100"
+    write(*,*) " Entrada: Nx Ny fator_dt Q0 x0 y0 duty"
+    write(*,*) " Padrao : 100 100 1.0 1e8 0.01 0.01 0.5"
     write(*,*) "======================================================="
-    read(*,*) Nx, Ny, fator_dt
+    read(*,*) Nx, Ny, fator_dt, Q0, x0, y0, duty
     
     allocate( T(Nx, Ny), T_new(Nx, Ny), Q_gauss(Nx, Ny) )
 
@@ -90,7 +90,6 @@ program ftcs
         end do
     end do
 
-    ! Impressões de Setup
     write(*,'(A)') "======================================================="
     write(*,'(A)') "        SIMULADOR TERMICO 2D - FTCS          "
     write(*,'(A)') "======================================================="
@@ -103,6 +102,11 @@ program ftcs
     write(*,'(A)') "[PROPRIEDADES FISICAS E NUMERICAS]"
     write(*,'(A, ES10.2, A)')       " Difusividade (alpha)     : ", alpha, " m^2/s"
     write(*,'(A, F10.3)')           " Fator de Estabilidade rx : ", rx
+    write(*,'(A)') "[PARAMETROS DE SENSIBILIDADE]"
+    write(*,'(A, ES10.2, A)')       " Intensidade Q0           : ", Q0, " W/m^3"
+    write(*,'(A, F10.5, A)')        " Centro Hotspot x0        : ", x0, " m"
+    write(*,'(A, F10.5, A)')        " Centro Hotspot y0        : ", y0, " m"
+    write(*,'(A, F10.3)')           " Duty-Cycle               : ", duty
     write(*,'(A)') "======================================================="
     write(*,'(A)') " Iniciando loop temporal... aguarde."
     write(*,'(A)') ""
@@ -120,7 +124,7 @@ program ftcs
         tempo = n * dt
 
         ! Duty-Cycle baseado no tempo físico
-        if ( mod(tempo, periodo) < (periodo / 2.0) ) then
+        if ( mod(tempo, periodo) < (duty * periodo) ) then
             S = 1.0
         else
             S = 0.0
@@ -253,15 +257,20 @@ program ftcs
     else
         write(50,'(A)')           " Limiar (302K)    : Nao atingido"
     end if
+    write(50,'(A)')         "[PARAMETROS DE SENSIBILIDADE]"
+    write(50,'(A, ES10.2, A)')    " Q0               : ", Q0, " W/m^3"
+    write(50,'(A, F10.5, A)')     " x0               : ", x0, " m"
+    write(50,'(A, F10.5, A)')     " y0               : ", y0, " m"
+    write(50,'(A, F10.3)')        " Duty-Cycle       : ", duty
     write(50,'(A)')         "======================================================="
     close(50)
 
     ! DADOS BRUTOS PARA O MATLAB (.dat)
     open(51, file = "metricas_ftcs.dat", status="replace")
     if (atingiu_limiar) then
-        write(51, *) Nx, dx, dt, rx, tempo_cpu, maxval(T), tempo_limiar, 1.0d0, 0.0d0, 0.0d0
+        write(51, *) Nx, dx, dt, rx, tempo_cpu, maxval(T), tempo_limiar, 1.0d0, 0.0d0, 0.0d0, Q0, x0, y0, duty
     else
-        write(51, *) Nx, dx, dt, rx, tempo_cpu, maxval(T), -1.0d0, 1.0d0, 0.0d0, 0.0d0
+        write(51, *) Nx, dx, dt, rx, tempo_cpu, maxval(T), -1.0d0, 1.0d0, 0.0d0, 0.0d0, Q0, x0, y0, duty
     end if
     close(51)
 

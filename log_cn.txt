@@ -1,0 +1,20 @@
+=======================================================
+         SIMULADOR TERMICO 2D - CRANK-NICOLSON
+=======================================================
+ Malha            :  100 x  100
+ dx               :   0.000202 m
+ dt               :   0.000111 s
+ Nt               :    42815
+ rx               :      0.250
+ CPU              :     15.181 s
+ T_max final      :     307.54 K
+ Media Iter/Passo :      3.746
+ Residuo Maximo   :   1.18E-05
+ Erro L2 (Norma)  :   6.63E-06
+ Limiar (302K)    :      0.076 s
+[PARAMETROS DE SENSIBILIDADE]
+ Q0               :   1.00E+08 W/m^3
+ x0               :    0.01000 m
+ y0               :    0.01000 m
+ Duty-Cycle       :      0.750
+=======================================================
