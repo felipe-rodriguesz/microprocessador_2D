@@ -15,7 +15,7 @@ program ftcs
     
     ! Parâmetros convectivos
     real(8), parameter :: h = 10.0                  ! Convecção (W/(m^2*K))
-    real(8), parameter :: Tinf = 300.0              ! Temp do fluido externo (K)
+    real(8), parameter :: Tinf = 27.0              ! Temp do fluido externo (K)
     
     ! Hotspot (valores lidos em tempo de execução)
     real(8) :: Q0                                    ! Intensidade máx (W/m^3)
@@ -39,13 +39,14 @@ program ftcs
     real(8) :: rx, ry                                 ! Coeficientes FTCS
     real(8) :: x, y, tempo                            ! Coordenadas e tempo
     real(8) :: Q, S                                   ! Fonte e ativação
+    real(8) :: norma                                  ! Para monitorar convergência
 
     ! Variáveis para análises
     real(8) :: Tmax_atual                             ! Pico térmico
     real(8) :: t_inicio_cpu, t_fim_cpu, tempo_cpu     ! Medir custo computacional
     logical :: atingiu_limiar = .false.               ! Flag para o alerta de temperatura
     real(8) :: tempo_limiar                           ! Guarda o instante exato do limiar
-    real(8), parameter :: temp_alvo = 302.0           ! Limiar de aquecimento para análise
+    real(8), parameter :: temp_alvo = 29.0           ! Limiar de aquecimento para análise
 
     ! Variáveis para os Snapshots
     integer :: proximo_segundo = 1
@@ -113,6 +114,9 @@ program ftcs
 
     ! Salva o histórico no tempo
     open(20, file = "serie_tempo_ftcs.dat", status="replace")
+    
+    ! NOVO: Arquivo para salvar a norma transiente do FTCS
+    open(60, file = "norma_transiente_ftcs.dat", status="replace")
 
     ! Cronômetro do processador
     call cpu_time(t_inicio_cpu)
@@ -122,6 +126,9 @@ program ftcs
     ! ===================================================================
     do n = 1, Nt
         tempo = n * dt
+        
+        ! Zera a norma no início de cada passo de tempo!
+        norma = 0.0 
 
         ! Duty-Cycle baseado no tempo físico
         if ( mod(tempo, periodo) < (duty * periodo) ) then
@@ -135,16 +142,19 @@ program ftcs
             do i = 2, Nx-1
                 Q = Q_gauss(i,j) * S
 
-                ! Equação do FTCS
+                ! Equação do FTCS (T(i,j) já é o T_old verdadeiro)
                 T_new(i, j) = T(i, j) &
                 + rx * (T(i+1, j) - 2.0*T(i, j) + T(i-1, j)) &
                 + ry * (T(i, j+1) - 2.0*T(i, j) + T(i, j-1)) &
                 + dt * Q / (rho*cp)
+                
+                ! Calcula a maior variação física de temperatura neste passo
+                norma = max(norma, abs(T_new(i, j) - T(i, j)))
             end do
         end do
 
         ! Condições de Contorno
-        ! 1. Laterais adiabáticas (Newmann)
+        ! 1. Laterais adiabáticas (Neumann)
         do j = 1, Ny
             T_new(1,j)  = T_new(2,j)
             T_new(Nx,j) = T_new(Nx-1,j)
@@ -161,6 +171,9 @@ program ftcs
         ! Avança no tempo
         T = T_new
 
+        ! Salva a norma para plotagem no MATLAB
+        write(60, *) tempo, norma
+
         ! Extração de dados a cada passo de tempo
         Tmax_atual = maxval(T)
 
@@ -175,10 +188,9 @@ program ftcs
             tempo_limiar = tempo
         end if
         
-        write(20, *) tempo, T(Nx/2, Ny/2), Tmax_atual
+        write(20, *) tempo, T(Nx/2, Ny/2), Tmax_atual, norma
 
         ! Salvar campos intermediários (Snapshots)
-        ! Verifica se o tempo cruzou 1.0, 2.0, 3.0 ou 4.0 segundos
         if (tempo >= (proximo_segundo) .and. proximo_segundo <= 4) then
             write(nome_arquivo, '("snap_ftcs_", I1, "s.dat")') proximo_segundo
             
@@ -195,6 +207,7 @@ program ftcs
         end if
 
     end do
+    close(60) ! Fecha o arquivo da norma
 
     ! Para o cronômetro
     call cpu_time(t_fim_cpu)
@@ -207,11 +220,11 @@ program ftcs
     write(*,'(A)') "======================================================="
     write(*,'(A, F10.3, A)')        " Tempo de CPU Consumido   : ", tempo_cpu, " segundos"
     if (atingiu_limiar) then
-        write(*,'(A, F6.1, A, F10.3, A)') " Limiar Térmico (", temp_alvo, "K)   : Atingido em ", tempo_limiar, " s"
+        write(*,'(A, F6.1, A, F10.3, A)') " Limiar Térmico (", temp_alvo, "°C)   : Atingido em ", tempo_limiar, " s"
     else
-        write(*,'(A, F6.1, A)')           " Limiar Térmico (", temp_alvo, "K)   : Nao atingido."
+        write(*,'(A, F6.1, A)')           " Limiar Térmico (", temp_alvo, "°C)   : Nao atingido."
     end if
-    write(*,'(A, F10.2, A)')        " Temperatura Max Final    : ", maxval(T), " K"
+    write(*,'(A, F10.2, A)')        " Temperatura Max Final    : ", maxval(T), " °C"
     write(*,'(A)') "======================================================="
     write(*,'(A)') " --> Sucesso: 'ftcs.dat' e 'serie_tempo_ftcs.dat' gerados."
 
@@ -248,14 +261,14 @@ program ftcs
     write(50,'(A, I8)')           " Nt               : ", Nt
     write(50,'(A, F10.3)')        " rx               : ", rx
     write(50,'(A, F10.3, A)')     " CPU              : ", tempo_cpu, " s"
-    write(50,'(A, F10.2, A)')     " T_max final      : ", maxval(T), " K"
+    write(50,'(A, F10.2, A)')     " T_max final      : ", maxval(T), " °C"
     write(50,'(A, F10.3)')        " Media Iter/Passo : ", 1.0d0
     write(50,'(A, ES10.2)')       " Residuo Maximo   : ", 0.0d0
-    write(50,'(A, ES10.2)')       " Erro L2 (Norma)  : ", 0.0d0
+    write(50,'(A, ES10.2)')       " Norma            : ", 0.0d0
     if (atingiu_limiar) then
-        write(50,'(A, F10.3, A)') " Limiar (302K)    : ", tempo_limiar, " s"
+        write(50,'(A, F10.3, A)') " Limiar (29°C)    : ", tempo_limiar, " s"
     else
-        write(50,'(A)')           " Limiar (302K)    : Nao atingido"
+        write(50,'(A)')           " Limiar (29°C)    : Nao atingido"
     end if
     write(50,'(A)')         "[PARAMETROS DE SENSIBILIDADE]"
     write(50,'(A, ES10.2, A)')    " Q0               : ", Q0, " W/m^3"

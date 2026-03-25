@@ -6,12 +6,12 @@
  dt               :   0.000111 s
  Nt               :    42815
  rx               :      0.250
- CPU              :     16.522 s
- T_max final      :     306.00 K
- Media Iter/Passo :      3.887
- Residuo Maximo   :   2.86E-05
- Erro L2 (Norma)  :   4.89E-06
- Limiar (302K)    :      0.076 s
+ CPU              :     26.717 s
+ T_max final      :      33.00 °C
+ Media Iter/Passo :      5.575
+ Residuo Maximo   :   1.13E-06
+ Norma (max|dT|)  :   7.56E-07
+ Limiar (29°C)    :      0.076 s
 [PARAMETROS DE SENSIBILIDADE]
  Q0               :   1.00E+08 W/m^3
  x0               :    0.01000 m
