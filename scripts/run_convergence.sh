@@ -9,14 +9,9 @@ rm -f data/results/dados_convergencia.dat data/results/conv_ftcs.dat data/result
 echo "[OK] Arquivos antigos removidos de data/results/."
 
 echo "[..] Compilando os programas..."
-gfortran -Wall -O2 src/ftcs.f90           -o sim_ftcs
-gfortran -Wall -O2 src/btcs.f90           -o sim_btcs
-gfortran -Wall -O2 src/crank_nicolson.f90 -o sim_cn
-
-if [ $? -ne 0 ]; then
-    echo "[ERRO] Falha na compilacao. Verifique os caminhos."
-    exit 1
-fi
+gfortran -Wall -O2 src/ftcs.f90           -o sim_ftcs || { echo "[ERRO] Falha ao compilar FTCS"; exit 1; }
+gfortran -Wall -O2 src/btcs.f90           -o sim_btcs || { echo "[ERRO] Falha ao compilar BTCS"; exit 1; }
+gfortran -Wall -O2 src/crank_nicolson.f90 -o sim_cn   || { echo "[ERRO] Falha ao compilar CN"; exit 1; }
 
 # Malhas testadas
 MALHAS=(5 10 20 50 100)

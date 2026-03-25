@@ -6,7 +6,7 @@
  dt               :   0.000111 s
  Nt               :    42815
  rx               :      0.250
- CPU              :     34.557 s
+ CPU              :     29.252 s
  T_max final      :      33.00 °C
  Media Iter/Passo :      7.383
  Residuo Maximo   :   1.01E-06

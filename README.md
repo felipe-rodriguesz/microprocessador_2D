@@ -20,7 +20,7 @@ microprocessador_2D/
 │   └── run_sensitivity.sh    # Estudo de sensibilidade paramétrica
 ├── plots/matlab/
 │   ├── plot_comparacoes_analises.mlx   # Comparação dos 3 métodos
-│   ├── plot_sensibilidade.m            # Análise de sensibilidade
+│   ├── teste_sensibilidade.mlx         # Análise de sensibilidade
 ├── data/
 │   └── results/              # Arquivos .dat gerados pelas simulações
 └── report/                   # Relatório técnico (em desenvolvimento)
@@ -57,7 +57,7 @@ onde $S(t)$ é uma função que liga/desliga o hotspot periodicamente.
 | $k$ | 150 | W/(m·K) |
 | $\alpha = k/(\rho c_p)$ | 9.20×10⁻⁵ | m²/s |
 | $h$ | 10 | W/(m²·K) |
-| $T_\infty$ | 300 | K |
+| $T_\infty$ | 27 | °C |
 | $Q_0$ | 1×10⁸ | W/m³ |
 | $\sigma$ | 0.002 | m |
 | Período | 0.5 | s |
@@ -129,7 +129,7 @@ Abra o MATLAB na pasta `data/results/` e rode:
 | Script | Conteúdo |
 |---|---|
 | `plot_comparacoes_analises.mlx` | Mapas de calor, superfície 3D, T_max(t), perfis, convergência, estabilidade, snapshots, erro vs Δx, CPU, tabela |
-| `plot_sensibilidade.m` | Análise de sensibilidade: Q₀, x₀, duty-cycle |   
+| `teste_sensibilidade.mlx` | Análise de sensibilidade: Q₀, x₀, duty-cycle |   
 
 ---
 
@@ -149,8 +149,8 @@ Abra o MATLAB na pasta `data/results/` e rode:
 
 ## Resultados obtidos (malha 100×100)
 
-| Esquema | T_max final (K) | CPU (s) | Limiar 302 K (s) | Iter/passo |
+| Esquema | T_max final (°C) | CPU (s) | Limiar 29 °C (s) | Iter/passo |
 |---|---|---|---|---|
-| FTCS | ~306.0 | ~1.0 | ~0.076 | — |
-| Backward Euler | ~303.7 | ~3.3 | ~0.110 | ~1.03 |
-| Crank-Nicolson | ~303.9 | ~4.5 | ~0.091 | ~1.06 |
+| FTCS | ~33.0 | ~1.0 | ~0.076 | — |
+| Backward Euler | ~33.0 | ~3.3 | ~0.110 | ~1.03 |
+| Crank-Nicolson | ~33.0 | ~4.5 | ~0.091 | ~1.06 |

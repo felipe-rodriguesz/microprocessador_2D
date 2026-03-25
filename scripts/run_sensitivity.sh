@@ -12,14 +12,9 @@ echo "==================================================="
 
 # Compilação
 echo "[..] Compilando os programas..."
-gfortran -Wall -O2 src/ftcs.f90           -o sim_ftcs
-gfortran -Wall -O2 src/btcs.f90           -o sim_btcs
-gfortran -Wall -O2 src/crank_nicolson.f90 -o sim_cn
-
-if [ $? -ne 0 ]; then
-    echo "[ERRO] Falha na compilacao."
-    exit 1
-fi
+gfortran -Wall -O2 src/ftcs.f90           -o sim_ftcs || { echo "[ERRO] Falha ao compilar FTCS"; exit 1; }
+gfortran -Wall -O2 src/btcs.f90           -o sim_btcs || { echo "[ERRO] Falha ao compilar BTCS"; exit 1; }
+gfortran -Wall -O2 src/crank_nicolson.f90 -o sim_cn   || { echo "[ERRO] Falha ao compilar CN"; exit 1; }
 echo "[OK] Compilacao concluida."
 echo ""
 

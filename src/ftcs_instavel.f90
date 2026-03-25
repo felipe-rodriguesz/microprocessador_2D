@@ -7,7 +7,7 @@ program ftcs_instavel
     real(8), parameter :: Lx = 0.02, Ly = 0.02
     real(8), parameter :: rho = 2330.0, cp = 700.0, k = 150.0
     real(8), parameter :: alpha = k/(rho*cp)
-    real(8), parameter :: h = 10.0, Tinf = 300.0
+    real(8), parameter :: h = 10.0, Tinf = 27.0
     real(8), parameter :: Q0 = 1.0e8, x0 = Lx/2.0, y0 = Ly/2.0
     real(8), parameter :: sigma = 0.002, periodo = 0.5
 
