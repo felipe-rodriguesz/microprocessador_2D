@@ -1,0 +1,6 @@
+0.0762 0.0762             ! 1. Dimensoes da Placa: Lx, Ly (m) [Artigo]
+2330.0 700.0 150.0        ! 2. Material: rho (kg/m3), cp (J/kgK), k (W/mK)
+28.8 23.0                 ! 3. Ambiente: h (W/m2K), Tinf (Celsius)
+0.005 240.0 5000.0        ! 4. Transiente: sigma (m), periodo (s), tmax (s)
+100 100 100.0             ! 5. Malha e Tempo: Nx, Ny, fator_dt (100x mais rapido!)
+5.0e6 0.0381 0.0381 0.5   ! 6. Hotspot: Q0, x0, y0, duty [Centro em 38.1mm]

@@ -10,3 +10,4 @@ sim_ftcs_instavel
 *.exe
 # Arquivos temporários do MATLAB
 *.asv
+src/*.txt

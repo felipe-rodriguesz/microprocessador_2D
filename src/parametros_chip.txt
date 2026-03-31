@@ -1,0 +1,6 @@
+0.02 0.02                 ! 1. Dimensoes do Chip: Lx, Ly (m)
+2330.0 700.0 150.0        ! 2. Material: rho (kg/m3), cp (J/kgK), k (W/mK)
+10.0 27.0                 ! 3. Ambiente: h (W/m2K), Tinf (Celsius)
+0.002 0.5 5.0             ! 4. Transiente: sigma (m), periodo (s), tmax (s)
+100 100 1.0               ! 5. Malha e Tempo: Nx, Ny, fator_dt
+1.0e8 0.010 0.010 0.5     ! 6. Hotspot: Q0, x0, y0, duty

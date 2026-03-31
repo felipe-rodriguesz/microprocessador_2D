@@ -4,14 +4,14 @@
  Malha            :  100 x  100
  dx               :   0.000202 m
  dt               :   0.000111 s
- Nt               :    42815
+ Nt               :    45068
  rx               :      0.250
- CPU              :     29.252 s
+ CPU              :     30.037 s
  T_max final      :      33.00 °C
- Media Iter/Passo :      7.383
+ Media Iter/Passo :      7.064
  Residuo Maximo   :   1.01E-06
  Norma (max|dT|)  :   5.07E-07
- Limiar (29°C)    :      0.076 s
+ Limiar (29°C)    :      0.326 s
 [PARAMETROS DE SENSIBILIDADE]
  Q0               :   1.00E+08 W/m^3
  x0               :    0.01000 m

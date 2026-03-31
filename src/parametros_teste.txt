@@ -1,0 +1,4 @@
+0.02 0.02           ! 1. Dimensoes da Placa: Lx, Ly (m)
+2330.0 700.0 150.0  ! 2. Propriedades: rho (kg/m3), cp (J/kgK), k (W/mK)
+1.0                 ! 3. Tempo final da simulacao: tmax (s)
+20 20 0.01          ! 4. Malha e Passo de Tempo: Nx, Ny, fator_dt

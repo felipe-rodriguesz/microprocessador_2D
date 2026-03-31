@@ -4,61 +4,54 @@ program ftcs_instavel
     ! -------------------------------------------------------------------
     ! DECLARAÇÕES DE VARIÁVEIS E CONSTANTES
     ! -------------------------------------------------------------------
-    real(8), parameter :: Lx = 0.02, Ly = 0.02
-    real(8), parameter :: rho = 2330.0, cp = 700.0, k = 150.0
-    real(8), parameter :: alpha = k/(rho*cp)
-    real(8), parameter :: h = 10.0, Tinf = 27.0
-    real(8), parameter :: Q0 = 1.0e8, x0 = Lx/2.0, y0 = Ly/2.0
-    real(8), parameter :: sigma = 0.002, periodo = 0.5
+    ! Variáveis Físicas
+    real(8) :: Lx, Ly
+    real(8) :: rho, cp, k, alpha
+    real(8) :: h, Tinf
+    real(8) :: sigma, periodo, tmax
 
-    integer, parameter :: Nx = 100, Ny = 100
-    real(8) :: dx, dy, dt, dt_estavel, tmax
+    ! Hotspot e malha
+    real(8) :: Q0, x0, y0, duty, fator_dt
+    integer :: Nx, Ny
+    real(8) :: dx, dy, dt, dt_estavel
     integer :: Nt
 
-    real(8) :: T(Nx, Ny), T_new(Nx, Ny), Q_gauss(Nx, Ny)
+    real(8), allocatable :: T(:, :), T_new(:, :), Q_gauss(:, :)
     integer :: i, j, n
     real(8) :: rx, ry, x, y, tempo, Q, S
     real(8) :: Tmax_atual
     logical :: divergiu = .false.
-    real(8), parameter :: T_limite = 1.0e6   ! Limiar de detecção de divergência (K)
+    real(8), parameter :: T_limite = 1.0e6   ! Limiar de detecção de divergência
+
+    read(*,*) Nx, Ny, fator_dt, Q0, x0, y0, duty
+
+    allocate(T(Nx, Ny), T_new(Nx, Ny), Q_gauss(Nx, Ny))
 
     ! -------------------------------------------------------------------
-    ! CONFIGURAÇÃO DA MALHA
+    ! CONFIGURAÇÃO DA MALHA E LEITURA DO ARQUIVO DE PARÂMETROS
     ! -------------------------------------------------------------------
+    open(15, file="src/parametros.txt", status="old", action="read")
+    read(15, *) Lx, Ly
+    read(15, *) rho, cp, k
+    read(15, *) h, Tinf
+    read(15, *) sigma, periodo, tmax
+    close(15)
+
+    alpha = k / (rho * cp)
+
     dx = Lx / (Nx - 1)
     dy = Ly / (Ny - 1)
 
     ! dt estável original
     dt_estavel = (dx**2) / (4.0 * alpha)
 
-    ! dt INSTÁVEL — 3x maior que o limite
-    dt = dt_estavel * 3.0
+    ! dt INSTÁVEL — 3x maior que o limite (preserva fator_dt via stdin)
+    dt = dt_estavel * 3.0d0 * fator_dt
 
-    tmax = 4.75
     Nt = int(tmax / dt)
 
     rx = alpha * dt / (dx**2)
     ry = alpha * dt / (dy**2)
-
-    ! -------------------------------------------------------------------
-    ! IMPRESSÃO DO AVISO
-    ! -------------------------------------------------------------------
-    write(*,'(A)') "========================================================="
-    write(*,'(A)') "   FTCS INSTÁVEL — APENAS PARA DEMONSTRAÇÃO DIDÁTICA"
-    write(*,'(A)') "========================================================="
-    write(*,'(A, F8.6, A)') " dt estável original : ", dt_estavel, " s"
-    write(*,'(A, F8.6, A)') " dt instável usado   : ", dt,         " s  (3x maior)"
-    write(*,'(A, F8.4)')    " rx                  : ", rx
-    write(*,'(A, F8.4)')    " ry                  : ", ry
-    write(*,'(A, F8.4)')    " rx + ry             : ", rx + ry
-    write(*,'(A)') ""
-    write(*,'(A)') " Condicao de Von Neumann: rx + ry <= 0.50"
-    if (rx + ry > 0.5) then
-        write(*,'(A, F5.2, A)') " STATUS: VIOLADA (rx + ry = ", rx+ry, ") — instabilidade esperada!"
-    end if
-    write(*,'(A)') "========================================================="
-    write(*,'(A)') " Iniciando simulação... aguarde divergência."
-    write(*,'(A)') ""
 
     ! -------------------------------------------------------------------
     ! CONDIÇÃO INICIAL E PRÉ-CÁLCULO
@@ -86,11 +79,11 @@ program ftcs_instavel
     do n = 1, Nt
         tempo = dble(n) * dt
 
-        ! Duty-Cycle por tempo físico
-        if ( mod(tempo, periodo) < (periodo / 2.0d0) ) then
-            S = 1.0
+        ! Duty-Cycle no instante t
+        if ( mod(tempo, periodo) < ((1.0 - duty) * periodo) ) then
+            S = 0.0  ! Começa DESLIGADA
         else
-            S = 0.0
+            S = 1.0  ! Termina LIGADA
         end if
 
         ! FTCS nos nós internos
@@ -124,10 +117,6 @@ program ftcs_instavel
 
         ! Detecta divergência e para antes de gerar NaN/Inf
         if (Tmax_atual > T_limite .or. isnan(Tmax_atual)) then
-            write(*,'(A, I6, A)')      " DIVERGÊNCIA detectada no passo n = ", n, "!"
-            write(*,'(A, F10.4, A)')   " Tempo                            = ", tempo, " s"
-            write(*,'(A, ES12.4, A)')  " T_max atingiu                    = ", Tmax_atual, " K"
-            write(*,'(A)') " Simulação interrompida para evitar overflow."
             divergiu = .true.
             exit
         end if
@@ -135,24 +124,6 @@ program ftcs_instavel
     end do
 
     close(20)
-
-    ! -------------------------------------------------------------------
-    ! RELATÓRIO FINAL
-    ! -------------------------------------------------------------------
-    write(*,'(A)') ""
-    write(*,'(A)') "========================================================="
-    write(*,'(A)') "              RELATÓRIO — FTCS INSTÁVEL"
-    write(*,'(A)') "========================================================="
-    if (divergiu) then
-        write(*,'(A)') " RESULTADO: Instabilidade numérica confirmada."
-        write(*,'(A)') " A temperatura divergiu exponencialmente,"
-        write(*,'(A)') " comprovando a violação da condição de Von Neumann."
-    else
-        write(*,'(A)') " RESULTADO: Não divergiu no tempo simulado."
-        write(*,'(A)') " Tente um dt ainda maior para forçar a instabilidade."
-    end if
-    write(*,'(A)') "========================================================="
-    write(*,'(A)') " --> Arquivo 'serie_tempo_ftcs_instavel.dat' gerado."
 
     ! Campo final (pode conter valores gigantes — salvo para visualização)
     open(10, file = "ftcs_instavel.dat", status="replace")
@@ -162,5 +133,7 @@ program ftcs_instavel
         end do
     end do
     close(10)
+
+    deallocate(T, T_new, Q_gauss)
 
 end program ftcs_instavel
