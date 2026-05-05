@@ -1,0 +1,8 @@
+&parametros
+ Lx = 0.02d0,
+ Ly = 0.02d0,
+ Nx = 200,
+ Ny = 200,
+ tol = 1.0d-8,
+ max_iter = 100000,
+/

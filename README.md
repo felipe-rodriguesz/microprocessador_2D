@@ -1,6 +1,6 @@
-# Simulação Térmica 2D — Microprocessador com Hotspot
+# Simulacao Termica 2D - Microprocessador (Chip)
 
-Projeto de Iniciação Científica: simulação numérica da equação do calor 2D não-estacionária aplicada a um microprocessador com hotspot gaussiano de atividade intermitente (duty-cycle). Três esquemas numéricos são implementados em Fortran e os resultados são analisados e visualizados em MATLAB.
+Projeto de simulacao numerica em Fortran para problemas 2D de transferencia de calor: chip transiente com hotspot gaussiano, chip em regime estacionario, Laplace e Poisson com solucao manufaturada. Os resultados sao salvos em `data/results/` e podem ser visualizados no MATLAB.
 
 ---
 
@@ -9,148 +9,135 @@ Projeto de Iniciação Científica: simulação numérica da equação do calor 
 ```
 microprocessador_2D/
 ├── src/
-│   ├── ftcs.f90              # Esquema explícito FTCS
-│   ├── btcs.f90              # Backward Euler (implícito, Gauss-Seidel)
-│   ├── crank_nicolson.f90    # Crank-Nicolson (implícito, Gauss-Seidel)
-│   └── ftcs_instavel.f90     # FTCS instável (demonstração didática)
-├── scripts/
-│   ├── run_results.sh        # Roda os 3 métodos na malha 100x100
-│   ├── run_convergence.sh    # Estudo de convergência espacial
-│   ├── run_instability.sh    # Demonstração de instabilidade numérica
-│   └── run_sensitivity.sh    # Estudo de sensibilidade paramétrica
-├── plots/matlab/
-│   ├── plot_comparacoes_analises.mlx   # Comparação dos 3 métodos
-│   ├── teste_sensibilidade.mlx         # Análise de sensibilidade
+│   ├── simulador_chip.f90         # Transiente com hotspot gaussiano + duty-cycle
+│   ├── chip_estacionario.f90      # Regime estacionario (chip + conveccao)
+│   ├── simulador_laplace.f90      # Laplace 2D com CC de Dirichlet
+│   └── simulador_poisson.f90      # Poisson 2D (MMS sin/cos)
+├── parametros.txt                 # Entrada do simulador_chip
+├── parametros_estacionario.txt    # Entrada do chip_estacionario
+├── parametros_laplace.txt         # Entrada do simulador_laplace
+├── parametros_poisson.txt         # Entrada do simulador_poisson
 ├── data/
-│   └── results/              # Arquivos .dat gerados pelas simulações
-└── report/                   # Relatório técnico (em desenvolvimento)
+│   └── results/                   # Arquivos .dat gerados pelas simulacoes
+└── plots/matlab/
+    ├── plot_chip.mlx
+    ├── plot_laplace.mlx
+    └── plot_poisson.mlx
 ```
 
 ---
 
-## Formulação matemática
+## Modelos e condicoes de contorno
 
-Equação do calor 2D com termo fonte:
-
-$$\rho c_p \frac{\partial T}{\partial t} = k \left(\frac{\partial^2 T}{\partial x^2} + \frac{\partial^2 T}{\partial y^2}\right) + Q(x, y, t)$$
-
-**Hotspot gaussiano com duty-cycle:**
-
-$$Q(x, y, t) = Q_0 \exp\left(-\frac{(x-x_0)^2 + (y-y_0)^2}{2\sigma^2}\right) \cdot S(t)$$
-
-onde $S(t)$ é uma função que liga/desliga o hotspot periodicamente.
-
-**Condições de contorno:**
-- Laterais: adiabáticas (Neumann) — $\partial T/\partial n = 0$
-- Base: temperatura fixa (Dirichlet) — $T = T_\infty$
-- Topo: convecção (Robin) — $-k\,\partial T/\partial n = h(T - T_\infty)$
-
----
-
-## Parâmetros físicos (silício)
-
-| Parâmetro | Valor | Unidade |
-|---|---|---|
-| $L_x = L_y$ | 0.02 | m |
-| $\rho$ | 2330 | kg/m³ |
-| $c_p$ | 700 | J/(kg·K) |
-| $k$ | 150 | W/(m·K) |
-| $\alpha = k/(\rho c_p)$ | 9.20×10⁻⁵ | m²/s |
-| $h$ | 10 | W/(m²·K) |
-| $T_\infty$ | 27 | °C |
-| $Q_0$ | 1×10⁸ | W/m³ |
-| $\sigma$ | 0.002 | m |
-| Período | 0.5 | s |
-| $t_{max}$ | 4.75 | s |
-
----
-
-## Esquemas numéricos implementados
-
-| Esquema | Tipo | Ordem temporal | Estabilidade | Solver |
-|---|---|---|---|---|
-| FTCS | Explícito | 1ª | Condicional ($r_x + r_y \leq 0.5$) | Direto |
-| Backward Euler | Implícito | 1ª | Incondicional | Gauss-Seidel |
-| Crank-Nicolson | Implícito | 2ª | Incondicional | Gauss-Seidel |
+- **Chip transiente e estacionario**: equacao do calor 2D com fonte gaussiana. Contornos: base Dirichlet (T0), laterais adiabaticas (Neumann) e topo convectivo (Robin).
+- **Laplace**: Dirichlet com topo a 100 e demais bordas a 0.
+- **Poisson**: solucao manufaturada $T(x,y)=sin(pi x) cos(pi y)$ para validacao do erro.
 
 ---
 
 ## Como rodar
 
-### Pré-requisitos
+### Pre-requisitos
 - `gfortran` instalado
-- MATLAB (para visualização)
-- WSL ou Linux
+- MATLAB (para visualizacao)
+- Linux ou WSL
 
-### 1. Resultados principais (malha 100×100)
+### 1. Chip transiente (hotspot + duty-cycle)
 ```bash
-cd scripts/
-bash run_results.sh
+cd src/
+gfortran -O2 -std=f2008 simulador_chip.f90 -o simulador_chip
+./simulador_chip
 ```
-Gera: `metricas_*.dat`, `log_*.txt`, `serie_tempo_*.dat`, `*_campo.dat`
+Entradas em `parametros.txt` (namelist `/parametros/`).
 
-### 2. Estudo de convergência espacial
-```bash
-bash run_convergence.sh
-```
-Roda malhas 5×5, 10×10, 20×20, 50×50, 100×100 para os 3 métodos.
-Gera: `conv_ftcs.dat`, `conv_btcs.dat`, `conv_cn.dat`
+Saidas em `data/results/`:
+- `norma_iter_chip.dat`
+- `convergencia_passos.dat`
+- `tmax_tempo.dat`
+- `sensores_tempo.dat`
+- `mapa_calor_chip.dat`
 
-### 3. Demonstração de instabilidade numérica
+### 2. Chip estacionario
 ```bash
-bash run_instability.sh
+cd src/
+gfortran -O2 -std=f2008 chip_estacionario.f90 -o chip_estacionario
+./chip_estacionario
 ```
-Testa FTCS com $\Delta t \times 1.02$ (violação da condição de Von Neumann).
-Gera: `stab_ftcs_f1.02.dat`, `stab_btcs_f1.02.dat`, `stab_cn_f1.02.dat`
+Entradas em `parametros_estacionario.txt`.
 
-### 4. Estudo de sensibilidade
-```bash
-bash run_sensitivity.sh
-```
-Varia $Q_0$, posição do hotspot $x_0$ e duty-cycle para os 3 métodos.
-Gera: `sens_*_<caso>.dat` e `sens_campo_*_<caso>.dat`
+Saidas em `data/results/`:
+- `norma_iter_chip.dat`
+- `mapa_calor_chip.dat`
 
-### Entrada dos programas Fortran
-Todos os executáveis recebem 7 parâmetros via stdin:
-```
-Nx  Ny  fator_dt  Q0  x0  y0  duty
-```
-Exemplo:
+### 3. Laplace 2D
 ```bash
-echo "100 100 1.0 1e8 0.01 0.01 0.5" | ./sim_cn
+cd src/
+gfortran -O2 -std=f2008 simulador_laplace.f90 -o simulador_laplace
+./simulador_laplace
 ```
+Entradas em `parametros_laplace.txt`.
+
+Saidas em `data/results/`:
+- `norma_iter_laplace.dat`
+- `mapa_calor_laplace.dat`
+
+### 4. Poisson 2D (MMS)
+```bash
+cd src/
+gfortran -O2 -std=f2008 simulador_poisson.f90 -o simulador_poisson
+./simulador_poisson
+```
+Entradas em `parametros_poisson.txt`.
+
+Saidas em `data/results/`:
+- `norma_iter_poisson.dat`
+- `mapa_calor_poisson.dat`
 
 ---
 
-## Visualização (MATLAB)
+## Arquivos de parametros
+
+Os programas leem um namelist `/parametros/` com os campos de cada arquivo `parametros_*.txt`. Exemplo (transiente):
+
+```
+&parametros
+ Lx = 0.02d0,
+ Ly = 0.02d0,
+ Nx = 100,
+ Ny = 100,
+ k = 150.0d0,
+ rho = 2330.0d0,
+ cp = 700.0d0,
+ Q0 = 1.0d8,
+ x0 = 0.01d0,
+ y0 = 0.01d0,
+ sigma = 0.002d0,
+ T0 = 27.0d0,
+ Tinf = 27.0d0,
+ h = 10.0d0,
+ dt = 0.005d0,
+ tmax = 5.0d0,
+ t_ciclo_ini = 0.0d0,
+ t_ciclo_fim = 5.0d0,
+ period = 0.050d0,
+ duty = 0.50d0,
+ tol = 1.0d-8,
+ max_iter = 100000,
+/
+```
+
+Notas:
+- O arquivo deve terminar com `/` **e** nova linha ao final (o `gfortran` pode falhar sem a nova linha).
+- O simulador transiente usa `t_ciclo_ini`, `t_ciclo_fim`, `period` e `duty` para ligar/desligar a fonte.
+
+---
+
+## Visualizacao (MATLAB)
 
 Abra o MATLAB na pasta `data/results/` e rode:
 
-| Script | Conteúdo |
+| Script | Conteudo |
 |---|---|
-| `plot_comparacoes_analises.mlx` | Mapas de calor, superfície 3D, T_max(t), perfis, convergência, estabilidade, snapshots, erro vs Δx, CPU, tabela |
-| `teste_sensibilidade.mlx` | Análise de sensibilidade: Q₀, x₀, duty-cycle |   
-
----
-
-## Casos do estudo de sensibilidade
-
-| Caso | Q₀ (W/m³) | x₀ (m) | Duty |
-|---|---|---|---|
-| `base` | 1.0×10⁸ | 0.010 | 0.50 |
-| `Q0_05x` | 0.5×10⁸ | 0.010 | 0.50 |
-| `Q0_2x` | 2.0×10⁸ | 0.010 | 0.50 |
-| `x0_025` | 1.0×10⁸ | 0.005 | 0.50 |
-| `x0_075` | 1.0×10⁸ | 0.015 | 0.50 |
-| `duty_025` | 1.0×10⁸ | 0.010 | 0.25 |
-| `duty_075` | 1.0×10⁸ | 0.010 | 0.75 |
-
----
-
-## Resultados obtidos (malha 100×100)
-
-| Esquema | T_max final (°C) | CPU (s) | Limiar 29 °C (s) | Iter/passo |
-|---|---|---|---|---|
-| FTCS | ~33.0 | ~1.0 | ~0.076 | — |
-| Backward Euler | ~33.0 | ~3.3 | ~0.110 | ~1.03 |
-| Crank-Nicolson | ~33.0 | ~4.5 | ~0.091 | ~1.06 |
+| `plot_chip.mlx` | Mapas de calor, evolucao temporal e sensores do chip |
+| `plot_laplace.mlx` | Campo de temperatura de Laplace |
+| `plot_poisson.mlx` | Campo e erro maximo do teste de Poisson |
